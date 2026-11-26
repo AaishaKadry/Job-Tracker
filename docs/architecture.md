@@ -72,7 +72,7 @@ only validator.
 
 ## 4. Backend architecture
 
-FastAPI exposes versioned REST endpoints and uses Pydantic request/response
+FastAPI exposes REST endpoints and uses Pydantic request/response
 schemas for boundary validation and serialization. A beginner-friendly
 organization is to keep these concerns distinct:
 
@@ -108,9 +108,6 @@ Python models, and Alembic records schema changes as ordered migrations.
   location, and notes.
 - **Application:** User and company references, job title, location, optional
   salary range/currency, URL, application date, notes, and current status.
-- **ApplicationStatusHistory:** Application reference, resulting status, and
-  change timestamp. This supports a chronological activity feed and
-  "ever reached" conversion calculations.
 - **Interview:** Application reference, date/time, type, notes, and outcome.
 - **Reminder:** Application reference, due date/time, note, and completion
   state.
@@ -133,6 +130,10 @@ cannot reference another user's company and that child records cannot be
 attached to another user's application. User email is case-insensitively
 unique, and password values are stored as hashes rather than plaintext.
 
+The initial REST API paths are mounted under `/api` as requested for the
+development milestone. They are not yet versioned; API versioning can be
+introduced before a public compatibility commitment.
+
 ### 5.2 Schema and data rules
 
 - Use generated primary keys and foreign keys for relationships.
@@ -151,41 +152,45 @@ unique, and password values are stored as hashes rather than plaintext.
 ## 6. REST API communication
 
 The browser and API communicate with JSON over HTTPS. API routes are grouped
-under `/api/v1`. Resource names are plural and use HTTP methods consistently.
-The exact endpoint inventory should be finalized during implementation, but
-the initial resource shape is:
+under `/api`. Resource names are plural and use HTTP methods consistently.
+The implemented endpoint inventory is:
 
 | Resource | Example operations |
 |---|---|
-| `/api/v1/auth` | Register, log in, log out, inspect current session |
-| `/api/v1/applications` | List, create, retrieve, update, delete applications |
-| `/api/v1/applications/{id}/status` | Change status and record history |
-| `/api/v1/companies` | List, create, retrieve, update, delete companies |
-| `/api/v1/applications/{id}/interviews` | Manage an application's interviews |
-| `/api/v1/applications/{id}/reminders` | Manage an application's reminders |
-| `/api/v1/dashboard` | Read dashboard counts and recent activity |
-| `/api/v1/analytics` | Read status/time-series/conversion summaries |
+| `/api/companies` | List, create, retrieve, update, delete companies |
+| `/api/applications` | List, create, retrieve, update, delete applications |
+| `/api/applications/{id}/status` | Change status and record history |
+| `/api/interviews` | List/create interviews; update/delete by ID |
+| `/api/reminders` | List/create reminders; update/delete by ID |
+| `/api/health` | Check API availability |
 
-Expected conventions:
+Real authentication is not yet implemented. The current development API
+identity is available only when `APP_ENV=development`; it must be replaced by
+the server-managed session authentication described below before deployment.
+
+Current API conventions:
 
 - `GET` reads; `POST` creates; `PATCH` partially updates; `DELETE` removes.
-- Use appropriate HTTP status codes, such as `201` for creation, `204` for a
-  successful no-content deletion, `401` for no valid session, `403` for a
-  forbidden operation where disclosure is appropriate, `404` for missing or
-  deliberately concealed unauthorized records, and `422` for invalid input.
+- Creates return `201`; reads and updates return `200`; deletions return `200`
+  with a confirmation object. Missing records and foreign-owned records both
+  return `404`; validation errors return `422`; database conflicts return
+  `409`.
 - Return stable, documented JSON response schemas. Error responses should be
   actionable and must not expose stack traces, SQL, password hashes, or
   session tokens.
-- Paginate list endpoints once record counts make unbounded responses
-  impractical; define a default page size and maximum before production use.
+- Success bodies use a `data` property, and errors use an `error` property
+  containing a stable code and message. Application lists include a
+  `pagination` object.
+- Paginate application listings (default 20 records, maximum 100); revisit
+  pagination for other collections if their size grows.
 - Frontend API calls send the session cookie using browser credentials. The
   API must configure CORS for the exact trusted frontend origin rather than
   allowing arbitrary origins with credentials.
 
 ## 7. Authentication and authorization
 
-For the MVP, use a server-managed session rather than storing an authentication
-token in browser local storage:
+The planned production MVP uses a server-managed session rather than storing
+an authentication token in browser local storage:
 
 1. On registration, validate and normalize the email, hash the password using
    a maintained password-hashing library with Argon2id (or its maintained
@@ -207,8 +212,13 @@ double-submit token) and validate the request origin as an additional
 defense. CORS is not a substitute for CSRF protection. Passwords and tokens
 must never appear in application logs.
 
-Every query or mutation involving an owned resource is scoped by the
-authenticated user's ID. A request containing a valid but foreign application
+For this API milestone only, a temporary fixed development identity is created
+when `APP_ENV=development`; the identity is disabled otherwise. This
+development mechanism does not authenticate a person and is not safe for
+deployment. Before production, replace it with the session flow above.
+
+Every query or mutation involving an owned resource is scoped by the current
+server-resolved user's ID. A request containing a valid but foreign application
 ID must not bypass that ownership condition. The backend is the security
 boundary; a hidden button or client-side route guard is not authorization.
 
