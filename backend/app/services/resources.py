@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from math import ceil
-from typing import TypeVar
+from typing import Literal, TypeVar
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
@@ -225,6 +225,8 @@ def list_applications(
     page_size: int,
     status: ApplicationStatus | None,
     search: str | None,
+    sort_by: Literal["application_date", "updated_at"],
+    sort_order: Literal["asc", "desc"],
 ) -> tuple[list[JobApplication], int]:
     filters = [JobApplication.user_id == user.id]
     if status is not None:
@@ -246,11 +248,21 @@ def list_applications(
     total = session.scalar(
         select(func.count()).select_from(base_query.where(*filters).subquery())
     ) or 0
+    sort_column = (
+        JobApplication.application_date
+        if sort_by == "application_date"
+        else JobApplication.updated_at
+    )
+    sort_expression = (
+        sort_column.asc().nulls_last()
+        if sort_order == "asc"
+        else sort_column.desc().nulls_last()
+    )
     applications = list(
         session.scalars(
             base_query.options(selectinload(JobApplication.company))
             .where(*filters)
-            .order_by(JobApplication.updated_at.desc(), JobApplication.id)
+            .order_by(sort_expression, JobApplication.id)
             .offset((page - 1) * page_size)
             .limit(page_size)
         )

@@ -89,7 +89,9 @@ promoted into scope.
   company name, job title, and current status.
 - **FR-JOB-02 (MVP):** An application can also store location, salary range,
   job URL, application date, and notes. These fields may be blank when the
-  information is not known or relevant.
+  information is not known or relevant. The application can also store
+  employment type, work arrangement, job description, and recruiter name and
+  email.
 - **FR-JOB-03 (MVP):** A user can view an application list and open a detail
   view for an individual application.
 - **FR-JOB-04 (MVP):** A user can edit an application they own.
@@ -101,8 +103,9 @@ promoted into scope.
 - **FR-JOB-07 (MVP):** Invalid URLs, negative salary values, invalid date
   values, and missing required fields are rejected with actionable validation
   messages.
-- **FR-JOB-08 (Later):** Users can search, filter, and export their
-  applications.
+- **FR-JOB-08 (MVP):** A user can search applications by job title or company,
+  filter by status, and move through paginated results.
+- **FR-JOB-09 (Later):** Users can export their applications.
 
 ### 5.3 Status and Kanban board
 
@@ -171,6 +174,12 @@ promoted into scope.
   and a clear path to add the first application.
 - **FR-DASH-05 (MVP):** Dashboard data is refreshed after relevant changes and
   does not present an unconfirmed mutation as saved.
+- **FR-DASH-06 (MVP):** The dashboard shows recent applications, future
+  interviews without an outcome, future incomplete follow-up reminders, and
+  the latest recorded application-status activity.
+- **FR-DASH-07 (MVP):** "Interviews scheduled" counts future interview records
+  that have no outcome; overdue reminders are not shown in the upcoming
+  follow-ups section.
 
 ### 5.8 Analytics
 
@@ -188,6 +197,11 @@ promoted into scope.
   shows "—" or "Not enough data" rather than an invalid number.
 - **FR-ANALYTICS-06 (MVP):** Analytics are scoped to the authenticated user;
   charts include labels and a non-visual text alternative for key values.
+- **FR-ANALYTICS-08 (MVP):** The application trend includes the current UTC
+  month and preceding eleven months, including zero-count months. Conversion
+  numerators count distinct applications that reached the target stage among
+  applications that reached Applied; repeated status transitions do not
+  inflate a rate.
 - **FR-ANALYTICS-07 (Later):** Users can select custom reporting periods,
   compare periods, or export analytics.
 

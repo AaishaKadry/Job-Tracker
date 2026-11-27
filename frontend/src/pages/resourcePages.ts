@@ -70,7 +70,7 @@ export const resourcePages: ResourcePageDefinition[] = [
     description: 'Understand your application pipeline and progress over time.',
     emptyTitle: 'Your insights will grow here',
     emptyDescription:
-      'Charts and conversion metrics will use real status history when analytics endpoints are available.',
+      'Review application trends, status distribution, and conversion metrics.',
     icon: ChartNoAxesCombined,
   },
   {

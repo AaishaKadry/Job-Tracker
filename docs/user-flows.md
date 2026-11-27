@@ -137,12 +137,15 @@ notification.
 ## 10. Review dashboard and analytics
 
 1. Authenticated user opens the dashboard.
-2. Frontend requests summary counts and recent activity.
-3. Backend calculates values from that user's applications and status history.
-4. Dashboard shows totals, in-progress applications, interviews scheduled,
-   offers, rejections, and recent changes.
-5. User opens analytics to see applications over time, current status
-   distribution, interview conversion, and offer conversion.
+2. Frontend makes one request to `GET /api/analytics/dashboard`.
+3. Backend calculates counts and chart series from that user's applications,
+   interviews, reminders, and status history.
+4. Dashboard shows totals, active applications, future interviews, offers,
+   rejections, recent applications, upcoming follow-ups, and recorded status
+   activity.
+5. User opens Analytics to see the same server-calculated monthly application
+   trend, current status distribution, interview conversion, and offer
+   conversion.
 6. If there is not enough data (for example, a zero denominator), the
    interface displays a clear "Not enough data" state.
 

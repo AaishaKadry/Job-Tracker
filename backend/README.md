@@ -131,6 +131,24 @@ Invoke-RestMethod http://127.0.0.1:8000/api/health
 
 Response: `{"status":"ok"}`.
 
+### Dashboard and analytics
+
+```powershell
+$dashboard = Invoke-RestMethod http://127.0.0.1:8000/api/analytics/dashboard
+$dashboard.data.stats
+$dashboard.data.interview_conversion
+$dashboard.data.offer_conversion
+```
+
+The single response includes dashboard counts, a twelve-month application-date
+series, current application counts by status, conversion metrics, recent
+applications, upcoming interviews and follow-ups, and recent status-history
+activity. The API calculates these from PostgreSQL and scopes every query to
+the current user. Interview and offer conversion rates are the percentage of
+distinct applications that reached the target stage among applications that
+reached Applied, divided by the distinct number that reached Applied. When
+that denominator is zero, `rate_percent` is `null`.
+
 ### Companies
 
 | Method | Path | Purpose |
@@ -162,7 +180,7 @@ Invoke-RestMethod "http://127.0.0.1:8000/api/companies/$($company.data.id)"
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/api/applications` | Create |
-| `GET` | `/api/applications` | List, filter, search, and paginate |
+| `GET` | `/api/applications` | List, filter, search, sort, and paginate |
 | `GET` | `/api/applications/{application_id}` | Retrieve |
 | `PUT` | `/api/applications/{application_id}` | Replace editable fields |
 | `PATCH` | `/api/applications/{application_id}/status` | Change status and record history |
@@ -181,11 +199,16 @@ $application = Invoke-RestMethod `
     salary_min = 90000
     salary_max = 120000
     salary_currency = 'USD'
+    employment_type = 'full-time'
+    work_arrangement = 'hybrid'
     job_url = 'https://northstar.example/jobs/123'
     application_date = '2025-01-15'
+    job_description = 'Build product experiences for job seekers'
+    recruiter_name = 'Jordan Recruiter'
+    recruiter_email = 'jordan@example.com'
     notes = 'Applied through the company website'
   } | ConvertTo-Json)
-Invoke-RestMethod "http://127.0.0.1:8000/api/applications?status=applied&page=1&page_size=20&q=Engineer"
+Invoke-RestMethod "http://127.0.0.1:8000/api/applications?status=applied&page=1&page_size=20&q=Engineer&sort_by=application_date&sort_order=desc"
 ```
 
 The paginated list shape is:
@@ -199,7 +222,10 @@ The paginated list shape is:
 
 `q` searches both company name and job title. Supported statuses are
 `wishlist`, `applied`, `assessment`, `interview`, `offer`, `rejected`, and
-`withdrawn`.
+`withdrawn`. Sort fields are `application_date` and `updated_at`; `sort_order`
+is `asc` or `desc`. Optional employment types are `full-time`, `part-time`,
+`contract`, `internship`, `temporary`, `apprenticeship`, and `other`.
+Work arrangements are `remote`, `hybrid`, and `on-site`.
 
 ### Interviews
 

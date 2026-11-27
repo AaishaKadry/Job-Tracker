@@ -13,7 +13,7 @@ from pydantic import (
     model_validator,
 )
 
-from app.models import ApplicationStatus
+from app.models import ApplicationStatus, EmploymentType, WorkArrangement
 
 T = TypeVar("T")
 
@@ -92,8 +92,13 @@ class JobApplicationFields(RequestSchema):
     salary_min: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
     salary_max: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
     salary_currency: str | None = Field(default=None, min_length=3, max_length=3)
+    employment_type: EmploymentType | None = None
+    work_arrangement: WorkArrangement | None = None
     job_url: str | None = Field(default=None, max_length=2048)
     application_date: date | None = None
+    job_description: str | None = None
+    recruiter_name: str | None = Field(default=None, max_length=200)
+    recruiter_email: str | None = Field(default=None, max_length=320)
     notes: str | None = None
 
     @field_validator("job_title")
@@ -115,6 +120,27 @@ class JobApplicationFields(RequestSchema):
         if value is None or not value.strip():
             return None
         return str(TypeAdapter(HttpUrl).validate_python(value.strip()))
+
+    @field_validator("recruiter_name")
+    @classmethod
+    def normalize_recruiter_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+    @field_validator("recruiter_email")
+    @classmethod
+    def validate_recruiter_email(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        value = value.strip()
+        if value.count("@") != 1 or any(character.isspace() for character in value):
+            raise ValueError("Enter a valid recruiter email address.")
+        local_part, domain = value.rsplit("@", 1)
+        if not local_part or "." not in domain or domain.startswith(".") or domain.endswith("."):
+            raise ValueError("Enter a valid recruiter email address.")
+        return value
 
     @model_validator(mode="after")
     def validate_salary_range(self) -> "JobApplicationFields":
@@ -155,8 +181,13 @@ class JobApplicationRead(BaseModel):
     salary_min: Decimal | None
     salary_max: Decimal | None
     salary_currency: str | None
+    employment_type: EmploymentType | None
+    work_arrangement: WorkArrangement | None
     job_url: str | None
     application_date: date | None
+    job_description: str | None
+    recruiter_name: str | None
+    recruiter_email: str | None
     notes: str | None
     created_at: datetime
     updated_at: datetime
@@ -248,3 +279,75 @@ class ReminderRead(BaseModel):
     is_completed: bool
     created_at: datetime
     updated_at: datetime
+
+
+class DashboardStats(BaseModel):
+    total_applications: int
+    active_applications: int
+    interviews_scheduled: int
+    offers_received: int
+    rejections: int
+
+
+class MonthlyApplicationCount(BaseModel):
+    month: str
+    count: int
+
+
+class ApplicationStatusCount(BaseModel):
+    status: ApplicationStatus
+    count: int
+
+
+class ConversionMetric(BaseModel):
+    applications_reached_applied: int
+    applications_reached_outcome: int
+    rate_percent: float | None
+
+
+class DashboardApplication(BaseModel):
+    id: UUID
+    job_title: str
+    company_name: str
+    status: ApplicationStatus
+    application_date: date | None
+    created_at: datetime
+
+
+class DashboardInterview(BaseModel):
+    id: UUID
+    application_id: UUID
+    job_title: str
+    company_name: str
+    scheduled_at: datetime
+    interview_type: str
+
+
+class DashboardFollowUp(BaseModel):
+    id: UUID
+    application_id: UUID
+    job_title: str
+    company_name: str
+    due_at: datetime
+    note: str | None
+
+
+class DashboardActivity(BaseModel):
+    id: UUID
+    application_id: UUID
+    job_title: str
+    company_name: str
+    status: ApplicationStatus
+    changed_at: datetime
+
+
+class DashboardRead(BaseModel):
+    stats: DashboardStats
+    applications_over_time: list[MonthlyApplicationCount]
+    applications_by_status: list[ApplicationStatusCount]
+    interview_conversion: ConversionMetric
+    offer_conversion: ConversionMetric
+    recent_applications: list[DashboardApplication]
+    upcoming_interviews: list[DashboardInterview]
+    upcoming_follow_ups: list[DashboardFollowUp]
+    latest_activity: list[DashboardActivity]

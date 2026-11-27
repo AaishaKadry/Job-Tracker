@@ -107,7 +107,8 @@ Python models, and Alembic records schema changes as ordered migrations.
 - **Company:** User-owned company name and optional website, industry,
   location, and notes.
 - **Application:** User and company references, job title, location, optional
-  salary range/currency, URL, application date, notes, and current status.
+  employment type and work arrangement, salary range/currency, URL, posting
+  description, application date, recruiter contact, notes, and current status.
 - **Interview:** Application reference, date/time, type, notes, and outcome.
 - **Reminder:** Application reference, due date/time, note, and completion
   state.
@@ -162,7 +163,18 @@ The implemented endpoint inventory is:
 | `/api/applications/{id}/status` | Change status and record history |
 | `/api/interviews` | List/create interviews; update/delete by ID |
 | `/api/reminders` | List/create reminders; update/delete by ID |
+| `/api/analytics/dashboard` | Return dashboard statistics, chart series, and recent/upcoming records |
 | `/api/health` | Check API availability |
+
+The dashboard endpoint aggregates the data needed by the dashboard and
+analytics pages into one response. Its service runs owner-scoped SQL queries
+for current status counts, monthly application dates, status-history
+conversions, upcoming interviews/reminders, recent applications, and latest
+status activity. Conversion percentages use distinct applications that reached both Applied and
+the target status, divided by distinct applications that reached Applied. A zero
+denominator is represented as `null`; the frontend displays "Not enough data."
+The monthly chart includes the current UTC month and the preceding eleven
+months, including zero-count months.
 
 Real authentication is not yet implemented. The current development API
 identity is available only when `APP_ENV=development`; it must be replaced by

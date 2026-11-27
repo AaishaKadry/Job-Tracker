@@ -81,6 +81,7 @@ def create_application(
     *,
     job_title: str = "Software Engineer",
     status: str = "applied",
+    application_date: str | None = "2025-01-15",
 ) -> UUID:
     response = client.post(
         "/api/applications",
@@ -91,7 +92,7 @@ def create_application(
             "salary_min": "90000",
             "salary_max": "120000",
             "salary_currency": "usd",
-            "application_date": "2025-01-15",
+            "application_date": application_date,
         },
     )
     assert response.status_code == 201
@@ -220,6 +221,61 @@ def test_application_search_filter_pagination_and_status_history(
     assert client.get(f"/api/applications/{first_id}").status_code == 404
 
 
+def test_application_job_details_and_application_date_sort(client: TestClient) -> None:
+    company_id = create_company(client)
+    complete_record = client.post(
+        "/api/applications",
+        json={
+            "company_id": str(company_id),
+            "job_title": "Product Designer",
+            "status": "wishlist",
+            "application_date": "2026-03-10",
+            "employment_type": "full-time",
+            "work_arrangement": "remote",
+            "job_description": "Design customer-facing workflows.",
+            "recruiter_name": "Jordan Recruiter",
+            "recruiter_email": "jordan@example.com",
+        },
+    )
+    assert complete_record.status_code == 201
+    application_id = complete_record.json()["data"]["id"]
+    assert complete_record.json()["data"]["employment_type"] == "full-time"
+    assert complete_record.json()["data"]["work_arrangement"] == "remote"
+    assert complete_record.json()["data"]["recruiter_email"] == "jordan@example.com"
+
+    older_record = client.post(
+        "/api/applications",
+        json={
+            "company_id": str(company_id),
+            "job_title": "Data Analyst",
+            "application_date": "2026-02-01",
+        },
+    )
+    assert older_record.status_code == 201
+
+    ascending = client.get(
+        "/api/applications?sort_by=application_date&sort_order=asc"
+    )
+    assert [item["job_title"] for item in ascending.json()["data"]] == [
+        "Data Analyst",
+        "Product Designer",
+    ]
+    descending = client.get(
+        "/api/applications?sort_by=application_date&sort_order=desc"
+    )
+    assert descending.json()["data"][0]["id"] == application_id
+
+    invalid_email = client.post(
+        "/api/applications",
+        json={
+            "company_id": str(company_id),
+            "job_title": "Invalid Recruiter",
+            "recruiter_email": "not-an-email",
+        },
+    )
+    assert invalid_email.status_code == 422
+
+
 def test_interview_and_reminder_crud_and_date_filters(client: TestClient) -> None:
     company_id = create_company(client)
     application_id = create_application(client, company_id)
@@ -332,3 +388,163 @@ def test_development_identity_fails_closed_outside_development(
     response = client.get("/api/companies")
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "AUTHENTICATION_NOT_CONFIGURED"
+
+
+def test_dashboard_analytics_uses_user_records_and_status_history(
+    client: TestClient,
+) -> None:
+    company_id = create_company(client)
+    application_date = datetime.now(timezone.utc).date().isoformat()
+    interview_application = create_application(
+        client,
+        company_id,
+        job_title="Interview Candidate",
+        application_date=application_date,
+    )
+    offer_application = create_application(
+        client,
+        company_id,
+        job_title="Offer Candidate",
+        application_date=application_date,
+    )
+    rejected_application = create_application(
+        client,
+        company_id,
+        job_title="Rejected Candidate",
+        application_date=application_date,
+    )
+
+    assert client.patch(
+        f"/api/applications/{interview_application}/status",
+        json={"status": "interview"},
+    ).status_code == 200
+    assert client.patch(
+        f"/api/applications/{offer_application}/status",
+        json={"status": "offer"},
+    ).status_code == 200
+    assert client.patch(
+        f"/api/applications/{rejected_application}/status",
+        json={"status": "rejected"},
+    ).status_code == 200
+    assert client.patch(
+        f"/api/applications/{interview_application}/status",
+        json={"status": "applied"},
+    ).status_code == 200
+    assert client.patch(
+        f"/api/applications/{interview_application}/status",
+        json={"status": "interview"},
+    ).status_code == 200
+
+    now = datetime.now(timezone.utc)
+    interview_response = client.post(
+        "/api/interviews",
+        json={
+            "application_id": str(interview_application),
+            "scheduled_at": (now + timedelta(days=1)).isoformat(),
+            "interview_type": "Video",
+            "notes": "Dashboard analytics test",
+        },
+    )
+    assert interview_response.status_code == 201
+    reminder_response = client.post(
+        "/api/reminders",
+        json={
+            "application_id": str(interview_application),
+            "due_at": (now + timedelta(days=2)).isoformat(),
+            "note": "Send a follow-up",
+        },
+    )
+    assert reminder_response.status_code == 201
+
+    response = client.get("/api/analytics/dashboard")
+    assert response.status_code == 200
+    dashboard = response.json()["data"]
+
+    assert dashboard["stats"] == {
+        "total_applications": 3,
+        "active_applications": 1,
+        "interviews_scheduled": 1,
+        "offers_received": 1,
+        "rejections": 1,
+    }
+    assert dashboard["interview_conversion"] == {
+        "applications_reached_applied": 3,
+        "applications_reached_outcome": 1,
+        "rate_percent": 33.33,
+    }
+    assert dashboard["offer_conversion"] == {
+        "applications_reached_applied": 3,
+        "applications_reached_outcome": 1,
+        "rate_percent": 33.33,
+    }
+    assert len(dashboard["applications_over_time"]) == 12
+    current_month = datetime.now(timezone.utc).strftime("%Y-%m")
+    assert next(
+        item["count"]
+        for item in dashboard["applications_over_time"]
+        if item["month"] == current_month
+    ) == 3
+    assert {
+        item["status"]: item["count"]
+        for item in dashboard["applications_by_status"]
+    } == {
+        "wishlist": 0,
+        "applied": 0,
+        "assessment": 0,
+        "interview": 1,
+        "offer": 1,
+        "rejected": 1,
+        "withdrawn": 0,
+    }
+    assert len(dashboard["recent_applications"]) == 3
+    assert dashboard["upcoming_interviews"][0]["application_id"] == str(
+        interview_application
+    )
+    assert dashboard["upcoming_follow_ups"][0]["application_id"] == str(
+        interview_application
+    )
+    assert dashboard["latest_activity"]
+    assert any(item["status"] == "rejected" for item in dashboard["latest_activity"])
+
+
+def test_dashboard_empty_data_has_zero_counts_and_null_conversion_rates(
+    client: TestClient,
+) -> None:
+    response = client.get("/api/analytics/dashboard")
+    assert response.status_code == 200
+    dashboard = response.json()["data"]
+
+    assert dashboard["stats"] == {
+        "total_applications": 0,
+        "active_applications": 0,
+        "interviews_scheduled": 0,
+        "offers_received": 0,
+        "rejections": 0,
+    }
+    assert dashboard["interview_conversion"]["rate_percent"] is None
+    assert dashboard["offer_conversion"]["rate_percent"] is None
+    assert len(dashboard["applications_over_time"]) == 12
+    assert all(item["count"] == 0 for item in dashboard["applications_over_time"])
+    assert all(item["count"] == 0 for item in dashboard["applications_by_status"])
+    assert dashboard["recent_applications"] == []
+    assert dashboard["upcoming_interviews"] == []
+    assert dashboard["upcoming_follow_ups"] == []
+    assert dashboard["latest_activity"] == []
+
+
+def test_dashboard_analytics_is_scoped_to_the_current_user(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    company_id = create_company(client)
+    create_application(client, company_id)
+
+    other_user_id = uuid4()
+    monkeypatch.setenv("DEV_USER_ID", str(other_user_id))
+    monkeypatch.setenv("DEV_USER_EMAIL", f"dashboard-{other_user_id}@localhost")
+
+    response = client.get("/api/analytics/dashboard")
+    assert response.status_code == 200
+    dashboard = response.json()["data"]
+    assert dashboard["stats"]["total_applications"] == 0
+    assert dashboard["recent_applications"] == []
+    assert dashboard["latest_activity"] == []

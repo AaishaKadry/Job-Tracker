@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api import applications, companies, interviews, reminders
+from app.api import analytics, applications, companies, interviews, reminders
 from app.errors import ApiError
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
@@ -38,6 +38,7 @@ app.include_router(companies.router)
 app.include_router(applications.router)
 app.include_router(interviews.router)
 app.include_router(reminders.router)
+app.include_router(analytics.router)
 
 
 @app.exception_handler(ApiError)

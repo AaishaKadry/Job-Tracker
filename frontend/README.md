@@ -5,10 +5,10 @@ and Tailwind CSS v4. React Router handles in-app navigation. The UI foundation
 uses local, typed components in the shadcn/ui composition style; these
 components are owned by this project and can be extended in small steps.
 
-The current milestone provides the responsive application shell, navigation,
-reusable UI primitives, and a centralized API client. Feature pages are
-intentionally honest placeholders: no sample records, dashboard metrics, or
-unfinished create/edit actions are presented as if they were real.
+The application includes a responsive shell, reusable UI primitives,
+API-backed application management, and a real dashboard/analytics view.
+Dashboard metrics, charts, interviews, reminders, and activity are loaded from
+the FastAPI API; the UI does not use mock records or hardcoded statistics.
 
 ## Requirements and setup
 
@@ -57,7 +57,14 @@ The production bundle is written to `dist/`.
 - `src/components/ui/`: reusable buttons, cards, badges, form fields, and
   table primitives.
 - `src/components/feedback/`: consistent empty, loading, and error states.
-- `src/pages/`: dashboard and routed feature placeholders.
+- `src/pages/`: dashboard, analytics, application pages, and remaining feature
+  placeholders.
+- `src/components/dashboard/`: reusable dashboard statistic, chart, and summary
+  list components.
+- `src/hooks/useDashboardData.ts`: one cancellable dashboard-summary request
+  shared by the dashboard and analytics pages.
+- `src/lib/api/dashboard.ts`: typed response contract for dashboard and
+  analytics data.
 - `src/config/navigation.ts`: one navigation definition used by the sidebar.
 - `src/lib/api/client.ts`: typed `fetch` wrapper and shared API error type.
 - `src/index.css`: Tailwind v4 import and semantic design tokens.
@@ -66,9 +73,10 @@ The production bundle is written to `dist/`.
 ## Routing and pages
 
 The sidebar links to Dashboard, Applications, Kanban Board, Companies,
-Interviews, Reminders, Analytics, and Settings. Each link has a working route.
-The pages other than the dashboard remain placeholders until their feature
-milestones; they do not call endpoints or invent application data.
+Interviews, Reminders, Analytics, and Settings. Dashboard and Analytics call
+`GET /api/analytics/dashboard`; application listing and detail routes use their
+corresponding API endpoints. Kanban, company, interview, reminder, and settings
+pages remain scoped placeholders until their feature milestones.
 
 ## API client
 
@@ -92,6 +100,15 @@ validation details. Network failures are surfaced as `NETWORK_ERROR`.
 Callers should catch `ApiError` and render the shared error state or
 field-specific validation messages; the client never converts failures into
 success-shaped data.
+
+## Dashboard and charts
+
+The dashboard requests one aggregate response rather than making separate
+requests for each card or chart. Recharts renders the twelve-month
+application-date trend and status distribution inside responsive containers.
+The underlying chart values are also included as screen-reader text. Conversion
+metrics use the counts returned by the API; a `null` rate is shown as "Not
+enough data" when there are no applications that reached Applied.
 
 ## UI foundation
 

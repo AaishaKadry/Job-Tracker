@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
@@ -40,11 +41,22 @@ def list_applications(
     page_size: int = Query(default=20, ge=1, le=100),
     application_status: ApplicationStatus | None = Query(default=None, alias="status"),
     q: str | None = Query(default=None, max_length=200),
+    sort_by: Literal["application_date", "updated_at"] = Query(
+        default="updated_at"
+    ),
+    sort_order: Literal["asc", "desc"] = Query(default="desc"),
     session: Session = Depends(get_db_session),
     user: User = Depends(get_current_user),
 ) -> dict[str, object]:
     applications, total = resources.list_applications(
-        session, user, page, page_size, application_status, q
+        session,
+        user,
+        page,
+        page_size,
+        application_status,
+        q,
+        sort_by,
+        sort_order,
     )
     return {
         "data": applications,

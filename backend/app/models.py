@@ -42,6 +42,22 @@ class ApplicationStatus(str, Enum):
     WITHDRAWN = "withdrawn"
 
 
+class EmploymentType(str, Enum):
+    FULL_TIME = "full-time"
+    PART_TIME = "part-time"
+    CONTRACT = "contract"
+    INTERNSHIP = "internship"
+    TEMPORARY = "temporary"
+    APPRENTICESHIP = "apprenticeship"
+    OTHER = "other"
+
+
+class WorkArrangement(str, Enum):
+    REMOTE = "remote"
+    HYBRID = "hybrid"
+    ONSITE = "on-site"
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
@@ -156,6 +172,17 @@ class JobApplication(Base):
             "salary_currency IS NULL OR char_length(salary_currency) = 3",
             name="ck_job_applications_salary_currency_length",
         ),
+        CheckConstraint(
+            "employment_type IS NULL OR employment_type IN "
+            "('full-time', 'part-time', 'contract', 'internship', 'temporary', "
+            "'apprenticeship', 'other')",
+            name="ck_job_applications_employment_type",
+        ),
+        CheckConstraint(
+            "work_arrangement IS NULL OR work_arrangement IN "
+            "('remote', 'hybrid', 'on-site')",
+            name="ck_job_applications_work_arrangement",
+        ),
         Index("ix_job_applications_user_id_status", "user_id", "status"),
         Index("ix_job_applications_user_id_application_date", "user_id", "application_date"),
         Index("ix_job_applications_user_id_updated_at", "user_id", "updated_at"),
@@ -177,8 +204,13 @@ class JobApplication(Base):
     salary_min: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))
     salary_max: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))
     salary_currency: Mapped[Optional[str]] = mapped_column(String(3))
+    employment_type: Mapped[Optional[str]] = mapped_column(String(30))
+    work_arrangement: Mapped[Optional[str]] = mapped_column(String(20))
     job_url: Mapped[Optional[str]] = mapped_column(String(2048))
     application_date: Mapped[Optional[date]] = mapped_column(Date)
+    job_description: Mapped[Optional[str]] = mapped_column(Text)
+    recruiter_name: Mapped[Optional[str]] = mapped_column(String(200))
+    recruiter_email: Mapped[Optional[str]] = mapped_column(String(320))
     notes: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
