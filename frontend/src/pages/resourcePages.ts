@@ -4,7 +4,6 @@ import {
   Building2,
   CalendarDays,
   ChartNoAxesCombined,
-  KanbanSquare,
   Settings2,
   type LucideIcon,
 } from 'lucide-react'
@@ -27,15 +26,6 @@ export const resourcePages: ResourcePageDefinition[] = [
     emptyDescription:
       'Application records will appear here once the frontend is connected to the applications API.',
     icon: BriefcaseBusiness,
-  },
-  {
-    path: 'board',
-    title: 'Kanban board',
-    description: 'See every opportunity by stage and keep your search moving.',
-    emptyTitle: 'Your board is ready',
-    emptyDescription:
-      'Application cards will be grouped by their current status after board data is connected.',
-    icon: KanbanSquare,
   },
   {
     path: 'companies',

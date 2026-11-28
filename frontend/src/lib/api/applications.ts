@@ -104,6 +104,33 @@ export interface PaginatedApplications {
   }
 }
 
+export async function fetchAllApplications(
+  signal?: AbortSignal,
+): Promise<JobApplication[]> {
+  const pageSize = 100
+  const applications: JobApplication[] = []
+  let page = 1
+  let pages = 1
+
+  do {
+    const query = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+      sort_by: 'updated_at',
+      sort_order: 'desc',
+    })
+    const response = await apiClient.get<PaginatedApplications>(
+      `/api/applications?${query.toString()}`,
+      { signal },
+    )
+    applications.push(...response.data)
+    pages = response.pagination.pages
+    page += 1
+  } while (page <= pages)
+
+  return applications
+}
+
 export async function fetchCompanies(signal?: AbortSignal): Promise<Company[]> {
   const response = await apiClient.get<ApiResponse<Company[]>>('/api/companies', {
     signal,

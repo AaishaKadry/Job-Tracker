@@ -85,14 +85,17 @@ should preserve input so the user can correct or retry.
 ## 6. Move an application on the Kanban board
 
 1. User opens the board; applications appear in columns for the seven statuses.
-2. User moves a card to a new column or uses the accessible status control.
+2. User moves a card to a new column with its drag handle, or focuses the
+   keyboard-accessible drag handle, presses Space/Enter, uses an arrow key to
+   choose a neighboring status, and presses Space/Enter again to drop.
 3. Frontend sends the new status to the API.
 4. Backend verifies ownership, validates the status, updates the application,
    and records a status history event atomically.
-5. On success, the card remains in the new column and dashboard/activity data
-   can refresh.
-6. On failure, the UI reports the problem and restores or reloads the previous
-   confirmed status.
+5. The board optimistically moves the card while the request is pending.
+6. On success, the API response confirms the card's new status; applications
+   loaded by the list page show that same persisted status.
+7. On failure, the UI reports the problem and returns the card to its prior
+   status.
 
 ## 7. Add and manage a company
 
@@ -101,20 +104,26 @@ should preserve input so the user can correct or retry.
 2. User enters company name and optional website, industry, location, and
    notes.
 3. Backend creates or updates a company owned by that user.
-4. The company can be selected for another application belonging to the same
+4. The company detail page lists applications that reference it; the user can
+   open an application, update the company details, or return to the directory.
+5. A company can be selected for another application belonging to the same
    user.
-5. If the user attempts to delete a company still in use, the UI explains that
-   it must first be reassigned or disconnected.
+6. If applications still reference a company, the delete action is disabled
+   and explains that the company must first be detached from those
+   applications. The API independently enforces this rule.
 
 ## 8. Schedule and review an interview
 
-1. User opens an application and adds an interview.
-2. User enters local date/time, interview type, and optional notes.
-3. Backend validates the date/time and ownership, converts the instant to the
-   agreed UTC representation, and saves the interview.
-4. The application detail and dashboard show the upcoming interview in the
-   user's configured time zone.
-5. After the interview, user edits its outcome or notes.
+1. User opens the interview area and schedules an interview for one of their
+   applications.
+2. User enters local date/time, chooses HR, Technical, Managerial, or Other,
+   and may enter notes and an outcome.
+3. Backend validates the date/time and application ownership, then saves the
+   interview with its associated application.
+4. The interview area groups events into upcoming and past and links each one
+   back to the application. Times display in the browser's local time zone.
+5. After the interview, user edits its details or records an outcome, or
+   deletes the event.
 
 **Failure paths:** invalid date/time, expired session, or an application that
 does not belong to the user. No event should be shown as saved until the
@@ -122,14 +131,19 @@ backend confirms it.
 
 ## 9. Create and complete a follow-up reminder
 
-1. User opens an application and adds a follow-up date/time with an optional
-   note.
+1. User opens the reminder area and chooses one of their applications, a
+   follow-up date/time, and an optional note.
 2. Backend verifies ownership and saves the reminder.
-3. The dashboard/reminder view lists it under **Upcoming** until due.
-4. A due incomplete reminder appears under **Overdue**.
-5. User marks it complete, edits it, or deletes it.
-6. The updated state is persisted and the reminder is removed from the
-   appropriate active list.
+3. The reminder view lists it under **Upcoming** until due, then under
+   **Overdue** while incomplete; times display in the browser's local time
+   zone.
+4. User marks it complete, reopens it, edits its due date/note, or deletes it.
+5. The updated state is persisted and the reminder moves to the appropriate
+   section.
+
+Deleting an application removes its associated interviews and reminders as
+cascaded dependent records. The application confirmation dialog names those
+records before deletion; deleting a company never cascades to applications.
 
 The MVP provides in-app reminders only; it does not send an email or device
 notification.

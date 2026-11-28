@@ -6,9 +6,10 @@ uses local, typed components in the shadcn/ui composition style; these
 components are owned by this project and can be extended in small steps.
 
 The application includes a responsive shell, reusable UI primitives,
-API-backed application management, and a real dashboard/analytics view.
-Dashboard metrics, charts, interviews, reminders, and activity are loaded from
-the FastAPI API; the UI does not use mock records or hardcoded statistics.
+API-backed application management, a drag-and-drop Kanban board, and a real
+dashboard/analytics view. Dashboard metrics, charts, interviews, reminders,
+and activity are loaded from the FastAPI API; the UI does not use mock records
+or hardcoded statistics.
 
 ## Requirements and setup
 
@@ -57,10 +58,14 @@ The production bundle is written to `dist/`.
 - `src/components/ui/`: reusable buttons, cards, badges, form fields, and
   table primitives.
 - `src/components/feedback/`: consistent empty, loading, and error states.
-- `src/pages/`: dashboard, analytics, application pages, and remaining feature
-  placeholders.
+- `src/pages/`: dashboard, analytics, application, company, interview, and
+  reminder pages, plus remaining feature placeholders.
 - `src/components/dashboard/`: reusable dashboard statistic, chart, and summary
   list components.
+- `src/pages/KanbanBoardPage.tsx`: paginated application loading, status
+  columns, optimistic drag-and-drop, and API error rollback.
+- `src/lib/api/applications.ts`: shared application/status types and
+  pagination-aware application fetch helpers.
 - `src/hooks/useDashboardData.ts`: one cancellable dashboard-summary request
   shared by the dashboard and analytics pages.
 - `src/lib/api/dashboard.ts`: typed response contract for dashboard and
@@ -75,8 +80,21 @@ The production bundle is written to `dist/`.
 The sidebar links to Dashboard, Applications, Kanban Board, Companies,
 Interviews, Reminders, Analytics, and Settings. Dashboard and Analytics call
 `GET /api/analytics/dashboard`; application listing and detail routes use their
-corresponding API endpoints. Kanban, company, interview, reminder, and settings
-pages remain scoped placeholders until their feature milestones.
+corresponding API endpoints. Company directory/detail/edit pages use the
+companies API and display each company's associated applications. The
+interview page supports scheduling, editing, outcomes, deletion, and upcoming
+versus past grouping. The reminder page supports creation, editing,
+completion/reopening, deletion, and upcoming/overdue/completed grouping.
+Both event pages link records to their applications and submit local form
+times as timezone-aware ISO timestamps. The Kanban board loads all pages of the same
+`GET /api/applications` collection and persists a drop through
+`PATCH /api/applications/{id}/status`. Settings remains a scoped placeholder.
+
+The board uses dnd-kit pointer and keyboard sensors. Drag a card by its handle;
+keyboard users can focus that handle, press Space or Enter to pick it up, use an
+arrow key to choose an adjacent status, and press Space or Enter to drop. The
+board moves optimistically and restores the previous column if the API request
+fails.
 
 ## API client
 

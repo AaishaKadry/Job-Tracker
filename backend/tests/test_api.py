@@ -340,6 +340,37 @@ def test_interview_and_reminder_crud_and_date_filters(client: TestClient) -> Non
     ).status_code == 422
 
 
+def test_deleting_application_removes_its_interviews_and_reminders(
+    client: TestClient,
+) -> None:
+    company_id = create_company(client)
+    application_id = create_application(client, company_id)
+    interview = client.post(
+        "/api/interviews",
+        json={
+            "application_id": str(application_id),
+            "scheduled_at": "2030-04-10T09:30:00Z",
+            "interview_type": "Technical",
+        },
+    )
+    reminder = client.post(
+        "/api/reminders",
+        json={
+            "application_id": str(application_id),
+            "due_at": "2030-04-11T09:30:00Z",
+        },
+    )
+    assert interview.status_code == 201
+    assert reminder.status_code == 201
+
+    deleted = client.delete(f"/api/applications/{application_id}")
+
+    assert deleted.status_code == 200
+    assert client.get("/api/interviews").json()["data"] == []
+    assert client.get("/api/reminders").json()["data"] == []
+    assert client.delete(f"/api/companies/{company_id}").status_code == 200
+
+
 def test_user_cannot_access_another_users_records(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -115,11 +115,16 @@ promoted into scope.
   detail or edit view.
 - **FR-KANBAN-01 (MVP):** A board presents applications grouped into columns
   by current status.
-- **FR-KANBAN-02 (MVP):** A user can move an application to another status
-  using an accessible board interaction or an equivalent status control.
-- **FR-KANBAN-03 (MVP):** A successful status change is saved by the backend
-  and remains after reload. A failed save is clearly reported and the displayed
-  state is restored or refreshed from the server.
+- **FR-KANBAN-02 (MVP):** Board cards show job title, company, location, and
+  application date, and provide a link to the application details.
+- **FR-KANBAN-03 (MVP):** A user can move an application between the seven
+  status columns using pointer or keyboard drag-and-drop.
+- **FR-KANBAN-04 (MVP):** The board uses the same persisted application
+  records as the application list. A status change is sent to the backend and
+  is reflected when either page loads those records.
+- **FR-KANBAN-05 (MVP):** The board provides empty columns, visible drag
+  feedback, and clearly reports failed saves while restoring the previous
+  status. Successful status changes persist after reload.
 - **FR-STATUS-03 (MVP):** Each status change is recorded with its time and
   resulting status for activity and analytics.
 
@@ -135,17 +140,22 @@ promoted into scope.
 - **FR-COMPANY-05 (MVP):** Removing a company must not silently erase its
   applications. The MVP should prevent deletion while applications reference
   the company or require the user to first reassign/remove those references.
+- **FR-COMPANY-06 (MVP):** A user can view company details and the applications
+  associated with that company, and can create, edit, or delete an unused
+  company.
 
 ### 5.5 Interviews
 
 - **FR-INTERVIEW-01 (MVP):** A user can add one or more interview events to an
   application.
 - **FR-INTERVIEW-02 (MVP):** An interview can store date and time, interview
-  type, notes, and outcome.
+  type (HR, Technical, Managerial, or Other), notes, and outcome.
 - **FR-INTERVIEW-03 (MVP):** Interview date and time are displayed in the
   user's configured time zone; timestamps are stored consistently in UTC.
 - **FR-INTERVIEW-04 (MVP):** A user can edit or delete an interview event
   belonging to their application.
+- **FR-INTERVIEW-05 (MVP):** A user can review interviews grouped as upcoming
+  or past and follow each interview to its associated application.
 
 ### 5.6 Follow-up reminders
 

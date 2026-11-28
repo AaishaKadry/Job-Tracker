@@ -119,10 +119,10 @@ Python models, and Alembic records schema changes as ordered migrations.
 An application belongs to one user and may reference a company owned by that
 same user. Interview and reminder records belong to an application; access to
 them is authorized through the owning application. Foreign keys and database
-constraints protect relationships. Deleting an application may delete its
-dependent interview, reminder, and history rows according to an explicitly
-chosen cascade policy; deleting a company must not unexpectedly delete
-applications.
+constraints protect relationships. Deleting an application cascades to its
+interviews, reminders, and status history. Deleting a company is restricted
+while applications reference it, so company deletion cannot unexpectedly
+erase applications.
 
 The initial database schema uses UUID identifiers, timezone-aware timestamps,
 and Alembic migrations. Applications, interviews, reminders, and status history
@@ -150,6 +150,12 @@ introduced before a public compatibility commitment.
 - Use Alembic migrations for all schema changes; do not rely on manual
   production database edits.
 
+The current frontend collects interview and reminder date/time values in the
+browser's local time zone, sends ISO timestamps with an explicit UTC offset,
+and displays returned timestamps in the browser's local time zone. A future
+account-settings milestone can replace this default with a saved user time
+zone.
+
 ## 6. REST API communication
 
 The browser and API communicate with JSON over HTTPS. API routes are grouped
@@ -170,11 +176,11 @@ The dashboard endpoint aggregates the data needed by the dashboard and
 analytics pages into one response. Its service runs owner-scoped SQL queries
 for current status counts, monthly application dates, status-history
 conversions, upcoming interviews/reminders, recent applications, and latest
-status activity. Conversion percentages use distinct applications that reached both Applied and
-the target status, divided by distinct applications that reached Applied. A zero
-denominator is represented as `null`; the frontend displays "Not enough data."
-The monthly chart includes the current UTC month and the preceding eleven
-months, including zero-count months.
+status activity. Conversion percentages use distinct applications that reached
+both Applied and the target status, divided by distinct applications that
+reached Applied. A zero denominator is represented as `null`; the frontend
+displays "Not enough data." The monthly chart includes the current UTC month
+and the preceding eleven months, including zero-count months.
 
 Real authentication is not yet implemented. The current development API
 identity is available only when `APP_ENV=development`; it must be replaced by
@@ -255,6 +261,20 @@ boundary; a hidden button or client-side route guard is not authorization.
 The same flow applies to other features: the UI expresses user intent, the API
 validates identity and input, the service applies the rule, the ORM persists
 the result, and the API returns a documented response.
+
+### 8.1 Kanban drag-and-drop
+
+The board loads the paginated application-list endpoint until all pages for the
+current user have been retrieved; it does not keep a separate copy of
+application records on the backend. Each application card is draggable and
+each status column is a drop target. A completed drop optimistically changes
+the card's local status and calls
+`PATCH /api/applications/{id}/status`. The existing service verifies ownership,
+updates the application, and records status history in one database
+transaction. The response replaces the optimistic record with the
+server-confirmed one. On an error, the board restores the prior status and
+shows a notification. Opening the application list or board loads the same
+persisted records, so changes remain consistent across routes and reloads.
 
 ## 9. Major technical risks and mitigations
 
